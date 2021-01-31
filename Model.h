@@ -33,14 +33,12 @@ struct Model {
 	std::string mName;
 	ModelNode_ mRootNode; // FIXME
 	AnimationSet_ mAnimationSet;
-	AnimationController_ mAnimationController;
 	AABB mAABB;
-	void Update(float absoluteTime, float deltaTime) {
-		if (mAnimationController) {
-			mAnimationController->Update(absoluteTime);
-		}
-	}
+	void Load(const std::string& fileName) { Load(fileName, {}); }
 	void Load(const std::string& fileName, const ModelOptions& options);
+	void LoadAnimation(const std::string& fileName, bool append = false) {
+		LoadAnimation(fileName, {}, append);
+	}
 	void LoadAnimation(const std::string& fileName, const ModelOptions& options, bool append = false);
 	void UpdateAABB() {
 		AABB aabb;
@@ -55,7 +53,7 @@ struct Model {
 	}
 	bool HasAnimations() const {
 		// FIXME
-		return nullptr != mAnimationController && mAnimationController->mAnimationSet->mAnimations.size() > 0;
+		return nullptr != mAnimationSet && mAnimationSet->mAnimations.size() > 0;
 	}
 };
 typedef std::shared_ptr<Model> Model_;

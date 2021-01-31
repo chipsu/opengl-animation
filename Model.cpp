@@ -5,7 +5,6 @@
 #include <assimp/postprocess.h>
 
 inline glm::vec3 make_vec3(const aiVector3D& v) { return glm::vec3(v.x, v.y, v.z); }
-inline glm::vec2 make_vec2(const aiVector2D& v) { return glm::vec2(v.x, v.y); }
 inline glm::quat make_quat(const aiQuaternion& q) { return glm::quat(q.w, q.x, q.y, q.z); }
 inline glm::mat4 make_mat4(const aiMatrix4x4& m) { return glm::transpose(glm::make_mat4(&m.a1)); }
 
@@ -132,7 +131,6 @@ void LoadAnimations(Model* model, const aiScene* scene) {
     if (!model->mAnimationSet) {
         model->mAnimationSet = std::make_shared<AnimationSet>();
         model->mAnimationSet->mGlobalInverseTransform = FindGlobalInverseTransform(scene); // FIXME
-        model->mAnimationController = std::make_shared<AnimationController>(model->mAnimationSet); // FIXME
     }
 
     for (unsigned int animationIndex = 0; animationIndex < scene->mNumAnimations; ++animationIndex) {
@@ -170,63 +168,12 @@ void LoadAnimations(Model* model, const aiScene* scene) {
     }
 }
 
-std::string GetMetaDataString(const aiMetadataEntry& entry) {
-    switch (entry.mType) {
-    case AI_BOOL: return "(BOOL) " + std::to_string(*(bool*)entry.mData);
-    case AI_INT32: return "(INT32) " + std::to_string(*(int32_t*)entry.mData);
-    case AI_UINT64: return "(UINT64) " + std::to_string(*(uint64_t*)entry.mData);
-    case AI_FLOAT: return "(FLOAT) " + std::to_string(*(float*)entry.mData);
-    case AI_DOUBLE: return "(DOUBLE) " + std::to_string(*(double*)entry.mData);
-    case AI_AISTRING: {
-        const auto val = (aiString*)entry.mData;
-        return "(AISTRING) " + std::string(val->data);
-    }
-    case AI_AIVECTOR3D: {
-        const auto val = make_vec3(*(aiVector3D*)entry.mData);
-        return "(AIVECTOR3D) " + glm::to_string(val);
-    }
-    default:
-        return "(UNKNOWN)";
-    }
-}
-
-void FixSceneUpAxis(const aiScene* scene) {
-    int32_t upAxis, upAxisSign;
-    int32_t frontAxis, frontAxisSign;
-    int32_t coordAxis, coordAxisSign;
-    scene->mMetaData->Get("UpAxis", upAxis);
-    scene->mMetaData->Get("UpAxisSign", upAxisSign);
-    scene->mMetaData->Get("FrontAxis", frontAxis);
-    scene->mMetaData->Get("FrontAxisSign", frontAxisSign);
-    scene->mMetaData->Get("CoordAxis", coordAxis);
-    scene->mMetaData->Get("CoordAxisSign", coordAxisSign);
-    aiVector3D upVec = upAxis == 0 ? aiVector3D(upAxisSign, 0, 0) : upAxis == 1 ? aiVector3D(0, upAxisSign, 0) : aiVector3D(0, 0, upAxisSign);
-    aiVector3D forwardVec = frontAxis == 0 ? aiVector3D(frontAxisSign, 0, 0) : frontAxis == 1 ? aiVector3D(0, frontAxisSign, 0) : aiVector3D(0, 0, frontAxisSign);
-    aiVector3D rightVec = coordAxis == 0 ? aiVector3D(coordAxisSign, 0, 0) : coordAxis == 1 ? aiVector3D(0, coordAxisSign, 0) : aiVector3D(0, 0, coordAxisSign);
-    aiMatrix4x4 mat(
-        rightVec.x, rightVec.y, rightVec.z, 0.0f,
-        upVec.x, upVec.y, upVec.z, 0.0f,
-        forwardVec.x, forwardVec.y, forwardVec.z, 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f
-    );
-    scene->mRootNode->mTransformation = mat;
-}
-
 const aiScene* LoadScene(const std::string& fileName, const ModelOptions& options) {
-    // FIXME: config
     auto props = aiCreatePropertyStore();
-    //aiSetImportPropertyFloat(props, AI_CONFIG_GLOBAL_SCALE_FACTOR_KEY, options.mScale);
-    auto target = /*aiProcess_GlobalScale |*/ aiProcess_CalcTangentSpace | aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_LimitBoneWeights;
-    auto scene = aiImportFileExWithProperties(fileName.c_str(), target, nullptr, props);
-    aiReleasePropertyStore(props);
-    
+    auto target = aiProcess_CalcTangentSpace | aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_LimitBoneWeights;
+    auto scene = aiImportFile(fileName.c_str(), target);
     if (nullptr == scene) {
         throw new std::runtime_error(aiGetErrorString());
-    }
-    if (scene->mMetaData) {
-        for (unsigned int i = 0; i < scene->mMetaData->mNumProperties; ++i) {
-            std::cout << scene->mMetaData->mKeys[i].data << "=" << GetMetaDataString(scene->mMetaData->mValues[i]) << std::endl;
-        }
     }
     scene->mRootNode->mTransformation.Scaling(aiVector3D(options.mScale, options.mScale, options.mScale), scene->mRootNode->mTransformation); // FIXME
     return scene;

@@ -163,42 +163,9 @@ struct AnimationController {
 	size_t mAnimationIndex = -1;
 	std::vector<glm::mat4> mFinalTransforms;
 
-	// FIX THIS
-	float mBlendInDuration = 0.5f;
-	float mBlendOut = 0.5f;
-	std::map<size_t, float> mBlendMap;
-	std::vector<glm::mat4> mBlendTransforms;
-
 	AnimationController(AnimationSet_ animationSet) {
 		mAnimationSet = animationSet;
 	}
-
-	/*
-	Hmm, idk how this works
-	move this to own controller maybe. some sequencer thing
-		animation bone priorities:
-		- walking + attack -> legs walking, arms attacking
-		- walking + jump -> jump prio
-		ik..
-
-	*/
-
-	void BlendAnimation(const size_t index, const float weight) {
-		assert(index != -1);
-		mBlendMap[index] = weight;
-	}
-
-	void BlendAnimation(const std::string& name, const float weight) {
-		const auto index = mAnimationSet->GetAnimationIndex(name);
-		BlendAnimation(index, weight);
-	}
-
-	/*void BlendAnimation(const size_t index, const float weight, const size_t iterations) {
-	}
-	void BlendAnimation(const size_t index, const float weight, const float duration) {
-	}
-	void BlendAnimation(const size_t index, const float weight, const float start, const float end) {
-	}*/
 
 	void SetAnimationIndex(size_t animationIndex) {
 		mAnimationIndex = animationIndex;
@@ -224,20 +191,6 @@ struct AnimationController {
 		ReadNodeHierarchy(mFinalTransforms, mAnimationIndex, absoluteTime);
 	}
 
-	void UpdateBlended(float absoluteTime) {
-		mBlendTransforms.resize(mAnimationSet->mBoneMappings.size()); // FIXME
-		std::fill(mFinalTransforms.begin(), mFinalTransforms.end(), glm::zero<glm::mat4>());
-
-		for (const auto& it : mBlendMap) {
-			const float weight = it.second;
-			if (weight < 0.001f) continue;
-			ReadNodeHierarchy(mBlendTransforms, it.first, absoluteTime);
-			for (size_t x = 0; x < mFinalTransforms.size(); ++x) {
-				mFinalTransforms[x] += mBlendTransforms[x] * weight;
-			}
-		}
-	}
-
 	void ReadNodeHierarchy(std::vector<glm::mat4>& finalTransforms, size_t index, float absoluteTime) {
 		const auto& animation = mAnimationSet->mAnimations[index];
 		const auto animationTime = animation->GetAnimationTime(absoluteTime);
@@ -245,7 +198,7 @@ struct AnimationController {
 	}
 
 	void ReadNodeHierarchy(std::vector<glm::mat4>& finalTransforms, Animation_ animation, const float time, const AnimationNode_ node, const glm::mat4 parentTransform) {
-		const auto nodeTransform = GetNodeTransform(animation, time, node);
+		const auto nodeTransform = animation->GetNodeTransform(time, node);
 		const auto combinedTransform = parentTransform * nodeTransform;
 
 		const auto it = mAnimationSet->mBoneMappings.find(node->mName); // TODO: node->mBoneIndex?
@@ -257,18 +210,6 @@ struct AnimationController {
 		for (auto& childNode : node->mChildren) {
 			ReadNodeHierarchy(finalTransforms, animation, time, childNode, combinedTransform);
 		}
-	}
-
-	glm::quat mHeadRot = glm::identity<glm::quat>(); // FIXME
-
-	virtual glm::mat4 GetNodeTransform(Animation_ animation, float time, const AnimationNode_ node) {
-		// FIXME: Temp test
-		if (node->mName == "Head") {
-			glm::mat4 head = glm::toMat4(mHeadRot);
-			return animation->GetNodeTransform(time, node) * head;
-		}
-		//std::cout << node->mName << std::endl;
-		return animation->GetNodeTransform(time, node);
 	}
 };
 typedef std::shared_ptr<AnimationController> AnimationController_;

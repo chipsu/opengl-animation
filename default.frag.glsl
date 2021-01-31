@@ -12,25 +12,7 @@ uniform vec3 uViewPos;
 uniform vec3 uLightColor;
 
 void main() {
-    // ambient
-    float ambientStrength = 0.1;
-    vec3 ambient = ambientStrength * uLightColor;
-  	
-    // diffuse 
-    vec3 norm = normalize(inNormal);
-    vec3 uLightDir = normalize(uLightPos - inPosition);
-    float diff = max(dot(norm, uLightDir), 0.1);
-    vec3 diffuse = diff * uLightColor;
-    
-    // specular
-    float specularStrength = 0.5;
-    vec3 viewDir = normalize(uViewPos - inPosition);
-    vec3 reflectDir = reflect(-uLightDir, norm);  
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
-    vec3 specular = specularStrength * spec * uLightColor;  
-        
-    vec3 result = (ambient + diffuse + specular) * inColor;
-    outColor = vec4(result, 1.0);
+    outColor = vec4(inColor, 1.0);
 
 	if(inBarycentric.x < 0.01 || inBarycentric.y < 0.01 || inBarycentric.z < 0.01) {
 	    outColor = outColor * 0.25;

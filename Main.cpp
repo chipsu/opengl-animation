@@ -15,7 +15,7 @@ Scene_ CreateScene(const int argc, const char** argv) {
 		
 		if (arg == "-s") {
 			scene->Load(argv[++i]);
-		} /*else if (arg == "-m") {
+		} else if (arg == "-m") {
 			loadModel = true;
 		} else if (arg == "-a") {
 			loadModel = false;
@@ -27,14 +27,12 @@ Scene_ CreateScene(const int argc, const char** argv) {
 			} else {
 				scene->mEntities.back()->mModel->LoadAnimation(arg, true);
 			}
-		}*/
+		}
 	}
 	for (const auto& entity : scene->mEntities) {
 		const auto& model = entity->mModel;
-		if (model && model->mAnimationController && model->mAnimationController->GetAnimationCount()) {
-			model->mAnimationController->SetAnimationIndex(0);
-		}
 	}
+	scene->Init();
 	return scene;
 }
 
@@ -149,24 +147,19 @@ int main(const int argc, const char **argv) {
 	const GLuint uViewPos = glGetUniformLocation(program->mID, "uViewPos");
 	const GLuint uLightColor = glGetUniformLocation(program->mID, "uLightColor");
 	
-	bool useBlender = false;
-	bool autoBlend = false;
 	bool animDetails = false;
 	bool modelDetails = true;
 
-	std::vector<float> selectedWeights;
-
 	glm::vec3 lightPos = { 100.0f, 100.0f, 100.0f };
 	glm::vec3 lightColor = { 1.0f, 1.0f, 1.0f };
+	glUniform3fv(uLightPos, 1, (GLfloat*)&lightPos[0]);
+	glUniform3fv(uLightColor, 1, (GLfloat*)&lightColor[0]);
 
 	Camera cam;
 	cam.SetAspect(windowWidth, windowHeight);
-	float movementSpeed = 1.0f;
 	float camSpeed = 10.0f;
 
 	FrameCounter<float> fps;
-	fps.mHistoryLimit = 30;
-
 	Timer<float> timer;
 
 	while (!glfwWindowShouldClose(window)) {
@@ -188,21 +181,6 @@ int main(const int argc, const char **argv) {
 		}
 
 		if (nullptr != scene->mSelected) {
-			movementSpeed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) ? 20.0f : 10.0f;
-
-			if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-				scene->mSelected->Walk(timer.mDelta * movementSpeed);
-			if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-				scene->mSelected->Walk(timer.mDelta * -movementSpeed);
-			if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-				scene->mSelected->Strafe(timer.mDelta * -movementSpeed);
-			if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-				scene->mSelected->Strafe(timer.mDelta * movementSpeed);
-			/*if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-				cam.Jump();
-			if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-				cam.Crounch();*/
-
 			auto selectedCenter = scene->mSelected->mPos + scene->mSelected->mUp * scene->mSelected->mModel->mAABB.mHalfSize.y;
 			const auto camOffset = selectedCenter + scene->mSelected->mFront * -scene->mCameraDistance;
 			const auto camCenter = selectedCenter;
@@ -217,7 +195,6 @@ int main(const int argc, const char **argv) {
 			} else {
 				cam.mPos = glm::lerp(cam.mPos, targetPos, timer.mDelta * camSpeed);
 				cam.mFront = glm::lerp(cam.mFront, glm::normalize(selectedCenter - cam.mPos), timer.mDelta * camSpeed);
-				//cam.mFront = glm::lerp(cam.mFront, scene->mSelected->mFront, timer.mDelta * camSpeed);
 			}
 		}
 
@@ -227,9 +204,6 @@ int main(const int argc, const char **argv) {
 		scene->Update(timer.mNow, timer.mDelta);
 
 		ui->NewFrame();
-
-		//ImGui::ShowDemoWindow();
-		ImGui::PlotHistogram("FPS", get_deque, (void*)&fps.mHistory, fps.mHistory.size());
 
 		auto selectedModel = scene->mSelected ? scene->mSelected->mModel : nullptr;
 		if (selectedModel) {
@@ -242,22 +216,15 @@ int main(const int argc, const char **argv) {
 					glm::to_string(selectedModel->mAABB.mHalfSize).c_str(),
 					glm::length(selectedModel->mAABB.mHalfSize) * 2.0f
 				);
-				/*for (const auto& mesh : selectedModel->mMeshes) {
-					ImGui::Text("Mesh: h=%d, v=%d, i=%d, c=%s, s=%s",
-						mesh->mHidden,
-						mesh->mVertices.size(),
-						mesh->mIndices.size(),
-						glm::to_string(mesh->mAABB.mCenter).c_str(),
-						glm::to_string(mesh->mAABB.mHalfSize).c_str()
-					);
-				}*/
 			}
 		}
 
-		if (selectedModel && selectedModel->mAnimationController) {
-			const auto ac = selectedModel->mAnimationController;
+		if (selectedModel && scene->mSelected->mAnimationController) {
+			const auto ac = scene->mSelected->mAnimationController;
 			const auto as = ac->mAnimationSet;
-			ImGui::Begin(ac->GetAnimationEnabled() ? ac->GetAnimation()->mName.c_str() : "Animations");
+			ImGui::Begin("Animations");
+
+			ImGui::Text(ac->GetAnimationEnabled() ? ac->GetAnimation()->mName.c_str() : "DISABLED");
 
 			ImGui::Checkbox("Animation info", &animDetails);
 			if (animDetails) {
@@ -266,72 +233,19 @@ int main(const int argc, const char **argv) {
 				}
 			}
 
-			//ac->mHeadRot = glm::quatLookAt(cam.mFront, { 0, 0, 1 });
-			double mx = 0;
-			glfwGetCursorPos(window, &mx, nullptr);
-			ac->mHeadRot = glm::rotate(glm::identity<glm::quat>(), (float)mx * 0.025f, { 0, 1, 0 });
-
-			ImGui::Checkbox("Blend", &useBlender);
-			if (useBlender) {
-				ImGui::Checkbox("autoBlend", &autoBlend);
-
-				// FIXME
-				if (selectedWeights.size() != ac->GetAnimationCount()) {
-					selectedWeights.resize(ac->GetAnimationCount());
-					if (!selectedWeights.empty()) {
-						std::fill(selectedWeights.begin(), selectedWeights.end(), 0);
-						selectedWeights[0] = 1.0f;
-					}
-				}
-
-				// FIXME
-				if (autoBlend) {
-					const auto animIdle = "CharacterArmature|Idle";
-					const auto animWalk = "CharacterArmature|Walk";
-					const auto animIdleIndex = as->GetAnimationIndex(animIdle);
-					const auto animWalkIndex = as->GetAnimationIndex(animWalk);
-					const float animFadeIn = 20.0f;
-					const float animFadeOut = 10.0f;
-
-					for (auto& w : selectedWeights) {
-						w = glm::clamp(w - timer.mDelta * animFadeOut, 0.0f, 1.0f);
-					}
-
-					// TODO: Move to ? & use velocity to choose animation
-					if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-						selectedWeights[animWalkIndex] = glm::clamp(selectedWeights[animWalkIndex] + timer.mDelta * animFadeIn, 0.0f, 1.0f);
-					} else {
-						selectedWeights[animIdleIndex] = glm::clamp(selectedWeights[animIdleIndex] + timer.mDelta * animFadeIn, 0.0f, 1.0f);
-					}
-				}
-
-				size_t animIndex = 0;
-				for (const auto& anim : as->mAnimations) {
-					ImGui::SliderFloat(("#" + std::to_string(animIndex) + " " + anim->mName).c_str(), &selectedWeights[animIndex], 0.0f, 1.0f);
-					ac->BlendAnimation(animIndex, selectedWeights[animIndex]);
-					animIndex++;
-				}
-
-				ac->UpdateBlended(timer.mNow); // FIXME
-			}
-
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 			ImGui::End();
 		}
 
-		//cam.mView = glm::lookAt(glm::vec3(0, 50, 50), { 0, 0, 0 }, { 0, 1, 0 });
-
 		glUniformMatrix4fv(uniformProj, 1, GL_FALSE, (GLfloat*)&cam.mProjection[0]);
 		glUniformMatrix4fv(uniformView, 1, GL_FALSE, (GLfloat*)&cam.mView[0]);
 		glUniform3fv(uViewPos, 1, (GLfloat*)&cam.mPos[0]);
-		glUniform3fv(uLightPos, 1, (GLfloat*)&lightPos[0]);
-		glUniform3fv(uLightColor, 1, (GLfloat*)&lightColor[0]);
 
 		for (auto& entity : scene->mEntities) {
 			const auto& model = entity->mModel;
 			if (!model) continue;
-			if (model->HasAnimations()) {
-				const auto& bones = model->mAnimationController->mFinalTransforms;
+			if (entity->mAnimationController) {
+				const auto& bones = entity->mAnimationController->mFinalTransforms;
 				glUniformMatrix4fv(uniformBones, bones.size(), GL_FALSE, (GLfloat*)&bones[0]);
 			}
 			glm::mat4 transform = glm::translate(glm::identity<glm::mat4>(), entity->mPos);

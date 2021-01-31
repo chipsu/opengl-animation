@@ -7,7 +7,9 @@ struct Input {
 	static Input* sInstance;
 	GLFWwindow* mWindow;
 	Scene_ mScene;
-	size_t mDebugMesh = 0;
+	double mMouseX = 0;
+	double mMouseY = 0;
+	float mLimitY = glm::half_pi<float>() * 0.9f;
 
 	Input(GLFWwindow* window, Scene_ scene) : mWindow(window), mScene(scene) {
 		sInstance = this;
@@ -33,47 +35,13 @@ struct Input {
 		sInstance = nullptr;
 	}
 
-	void SetDebugMesh(Entity_ entity, size_t index) {
-		//auto& meshes = entity->mModel->mMeshes;
-		//mDebugMesh = index;
-
-		//if (mDebugMesh >= meshes.size()) {
-		//	mDebugMesh = -1;
-		//}
-
-		//if (mDebugMesh == -1) {
-		//	std::cout << "DEBUG: Show all meshes" << std::endl;
-		//	for (auto& mesh : meshes) {
-		//		mesh->mHidden = false;
-		//	}
-		//	//mScene->mCameraCenter = entity->mModel->mAABB.mCenter; // TODO OFFSET
-		//}
-		//else {
-		//	std::cout << "DEBUG: Show mesh " << mDebugMesh << std::endl;
-		//	for (auto& mesh : meshes) {
-		//		mesh->mHidden = true;
-		//	}
-		//	meshes[mDebugMesh]->mHidden = false;
-		//	//mScene->mCameraCenter = meshes[mDebugMesh]->mAABB.mCenter; // TODO OFFSET
-		//}
-	}
-
 	void OnKey(GLFWwindow* window, int key, int scancode, int action, int mods) {
 		if (false) printf("key_callback: %d %d %d\n", key, action, mods);
 		if (action == GLFW_RELEASE) {
 			auto& entity = mScene->mSelected;
 			if (nullptr != entity) {
-				auto& animationController = entity->mModel->mAnimationController;
-				if (key == GLFW_KEY_LEFT) {
-					SetDebugMesh(entity, mDebugMesh - 1);
-				}
-				if (key == GLFW_KEY_RIGHT) {
-					SetDebugMesh(entity, mDebugMesh + 1);
-				}
-				if (key == GLFW_KEY_UP) {
-					SetDebugMesh(entity, -1);
-				}
-				if (key == GLFW_KEY_ENTER) {
+				auto& animationController = entity->mAnimationController;
+				if (key == GLFW_KEY_SPACE) {
 					size_t animationIndex = animationController->GetAnimationIndex() + 1;
 					if (animationIndex >= animationController->GetAnimationCount()) animationIndex = -1;
 					animationController->SetAnimationIndex(animationIndex);
@@ -86,10 +54,6 @@ struct Input {
 			}
 		}
 	}
-
-	double mMouseX = 0;
-	double mMouseY = 0;
-	float mLimitY = glm::half_pi<float>() * 0.9f;
 
 	void OnMousePos(GLFWwindow* window, double xpos, double ypos) {
 		if (false) printf("cursor_position_callback: %f %f\n", xpos, ypos);
