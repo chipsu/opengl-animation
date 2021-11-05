@@ -3,6 +3,7 @@
 void Scene::Load(const std::string& fileName) {
 	rapidjson::Document config;
 	std::ifstream ifs(fileName);
+	assert(ifs.is_open());
 	rapidjson::IStreamWrapper isw(ifs);
 	config.ParseStream(isw);
 

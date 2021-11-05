@@ -8,31 +8,33 @@ Input* Input::sInstance = nullptr;
 
 Scene_ CreateScene(const int argc, const char** argv) {
 	auto scene = std::make_shared<Scene>();
-	bool loadModel = true;
 
-	for (int i = 1; i < argc; ++i) {
-		std::string arg = argv[i];
-		
-		if (arg == "-s") {
-			scene->Load(argv[++i]);
-		} else if (arg == "-m") {
-			loadModel = true;
-		} else if (arg == "-a") {
-			loadModel = false;
-		} else {
-			if (loadModel) {
-				auto model = std::make_shared<Model>();
-				model->Load(arg);
-				scene->mEntities.push_back(std::make_shared<Entity>(model));
+	if(argc == 1) {
+		scene->Load("scene.json");
+	} else {
+		bool loadModel = true;
+		for(int i = 1; i < argc; ++i) {
+			std::string arg = argv[i];
+
+			if(arg == "-s") {
+				scene->Load(argv[++i]);
+			} else if(arg == "-m") {
+				loadModel = true;
+			} else if(arg == "-a") {
+				loadModel = false;
 			} else {
-				scene->mEntities.back()->mModel->LoadAnimation(arg, true);
+				if(loadModel) {
+					auto model = std::make_shared<Model>();
+					model->Load(arg);
+					scene->mEntities.push_back(std::make_shared<Entity>(model));
+				} else {
+					scene->mEntities.back()->mModel->LoadAnimation(arg, true);
+				}
 			}
 		}
 	}
-	for (const auto& entity : scene->mEntities) {
-		const auto& model = entity->mModel;
-	}
 	scene->Init();
+	scene->SelectNext();
 	return scene;
 }
 
@@ -73,7 +75,7 @@ struct Camera {
 	}
 
 	void SetAspect(int width, int height) {
-		mFov = width / (float)height;
+		mAspect = width / (float)height;
 	}
 
 	void UpdateView() {
@@ -146,7 +148,7 @@ int main(const int argc, const char **argv) {
 	const GLuint uLightPos = glGetUniformLocation(program->mID, "uLightPos");
 	const GLuint uViewPos = glGetUniformLocation(program->mID, "uViewPos");
 	const GLuint uLightColor = glGetUniformLocation(program->mID, "uLightColor");
-	
+
 	bool animDetails = false;
 	bool modelDetails = true;
 

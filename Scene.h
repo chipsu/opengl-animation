@@ -11,7 +11,7 @@ struct Entity {
 	glm::vec3 mUp = { 0,1,0 };
 	glm::quat mRot = { 1,0,0,0 };
 	glm::vec3 mScale = { 1,1,1 };
-	
+
 	Entity() {}
 	Entity(Model_ model) : mModel(model) {}
 	Entity(Model_ model, const glm::vec3& pos) : mModel(model), mPos(pos) {}
@@ -22,13 +22,13 @@ struct Entity {
 			mAnimationController->SetAnimationIndex(0);
 		}
 	}
-	
+
 	void Update(float absoluteTime, float deltaTime) {
 		if (mAnimationController) {
 			mAnimationController->Update(absoluteTime);
 		}
 	}
-	
+
 	void Walk(float f) {
 		mPos += mFront * f;
 	}
