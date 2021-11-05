@@ -27,12 +27,14 @@ typedef ModelNode::ModelNode_ ModelNode_;
 
 struct ModelOptions {
 	float mScale = 1.0f;
+	bool mAnimations = true;
 };
 
 struct Model {
 	std::string mName;
 	ModelNode_ mRootNode; // FIXME
 	AnimationSet_ mAnimationSet;
+	glm::mat4 mGlobalInverseTransform;
 	AABB mAABB;
 	void Load(const std::string& fileName) { Load(fileName, {}); }
 	void Load(const std::string& fileName, const ModelOptions& options);

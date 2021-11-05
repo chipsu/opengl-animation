@@ -42,11 +42,12 @@ struct Input {
 			if (nullptr != entity) {
 				auto& animationController = entity->mAnimationController;
 				if (key == GLFW_KEY_SPACE) {
-					size_t animationIndex = animationController->GetAnimationIndex() + 1;
+					/*size_t animationIndex = animationController->GetAnimationIndex() + 1;
 					if (animationIndex >= animationController->GetAnimationCount()) animationIndex = -1;
 					animationController->SetAnimationIndex(animationIndex);
 					const auto animation = animationController->GetAnimation();
-					std::cout << "Animation: " << animationIndex << ", " << (animation ? animation->mName : "DISABLED") << std::endl;
+					std::cout << "Animation: " << animationIndex << ", " << (animation ? animation->mName : "DISABLED") << std::endl;*/
+					animationController->SetAnimationIndex(0);
 				}
 			}
 			if (key == GLFW_KEY_TAB) {

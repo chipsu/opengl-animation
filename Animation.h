@@ -81,6 +81,7 @@ struct AnimationNode {
 	std::vector<AnimationNode_> mChildren;
 	AnimationNode_ mParent;
 	glm::mat4 mTransform;
+	uint32_t mCachedBoneIndex = -2; // FIXME!
 
 	AnimationNode(const std::string& name, AnimationNode_ parent, const glm::mat4& transform) : mName(name), mParent(parent), mTransform(transform) {
 	}
@@ -127,12 +128,10 @@ struct Animation {
 };
 typedef std::shared_ptr<Animation> Animation_;
 
-// TODO: naming idk
 struct AnimationSet {
 	std::vector<Animation_> mAnimations;
-	std::map<std::string, uint32_t> mBoneMappings;
+	std::unordered_map<std::string, uint32_t> mBoneMappings;
 	std::vector<glm::mat4> mBoneOffsets;
-	glm::mat4 mGlobalInverseTransform;
 
 	size_t GetAnimationIndex(const std::string& name) const {
 		for (size_t i = 0; i < mAnimations.size(); ++i) {
@@ -141,6 +140,18 @@ struct AnimationSet {
 			}
 		}
 		return -1;
+	}
+
+	uint32_t GetBoneIndex(AnimationNode_ node) const {
+		if(node->mCachedBoneIndex != -2) return node->mCachedBoneIndex;
+		node->mCachedBoneIndex = GetBoneIndex(node->mName);
+		return node->mCachedBoneIndex;
+	}
+
+	uint32_t GetBoneIndex(const std::string& name) const {
+		const auto it = mBoneMappings.find(name);
+		if(it == mBoneMappings.end()) return -1;
+		return it->second;
 	}
 
 	uint32_t MapBone(const std::string& name, const glm::mat4& boneOffset) {
@@ -160,56 +171,93 @@ typedef std::shared_ptr<AnimationSet> AnimationSet_;
 
 struct AnimationController {
 	AnimationSet_ mAnimationSet;
-	size_t mAnimationIndex = -1;
+	std::unordered_map<size_t, float> mAnimationWeights;
 	std::vector<glm::mat4> mFinalTransforms;
+	glm::mat4 mGlobalInverseTransform;
 
-	AnimationController(AnimationSet_ animationSet) {
+	AnimationController(AnimationSet_ animationSet, const glm::mat4& globalInverseTransform) {
 		mAnimationSet = animationSet;
+		mGlobalInverseTransform = globalInverseTransform;
 	}
 
 	void SetAnimationIndex(size_t animationIndex) {
-		mAnimationIndex = animationIndex;
+		mAnimationWeights.clear();
+		mAnimationWeights[animationIndex] = 1.0f;
 	}
-	size_t GetAnimationIndex() const {
-		return mAnimationIndex;
+
+	void SetAnimationWeight(size_t animationIndex, float weight) {
+		mAnimationWeights[animationIndex] = weight;
 	}
+
 	size_t GetAnimationCount() const {
 		return mAnimationSet->mAnimations.size();
 	}
-	bool GetAnimationEnabled() const {
-		return mAnimationIndex < GetAnimationCount();
-	}
-	Animation_ GetAnimation() const {
-		return mAnimationIndex < GetAnimationCount() ? mAnimationSet->mAnimations[mAnimationIndex] : nullptr;
-	}
 
 	void Update(float absoluteTime) {
-		if (!GetAnimationEnabled()) {
-			return;
-		}
 		mFinalTransforms.resize(mAnimationSet->mBoneMappings.size()); // FIXME
-		ReadNodeHierarchy(mFinalTransforms, mAnimationIndex, absoluteTime);
+		BlendNodeHierarchy(mFinalTransforms, absoluteTime);
 	}
 
-	void ReadNodeHierarchy(std::vector<glm::mat4>& finalTransforms, size_t index, float absoluteTime) {
-		const auto& animation = mAnimationSet->mAnimations[index];
-		const auto animationTime = animation->GetAnimationTime(absoluteTime);
-		ReadNodeHierarchy(finalTransforms, animation, animationTime, animation->mRootNode, mAnimationSet->mGlobalInverseTransform);
+	void BlendNodeHierarchy(std::vector<glm::mat4>& outputTransforms, float absoluteTime) {
+		const auto& rootNode = mAnimationSet->mAnimations[0]->mRootNode; // FIXME
+		BlendNodeHierarchy(outputTransforms, absoluteTime, rootNode, glm::identity<glm::mat4>());
 	}
 
-	void ReadNodeHierarchy(std::vector<glm::mat4>& finalTransforms, Animation_ animation, const float time, const AnimationNode_ node, const glm::mat4 parentTransform) {
-		const auto nodeTransform = animation->GetNodeTransform(time, node);
-		const auto combinedTransform = parentTransform * nodeTransform;
+	void BlendNodeHierarchy(std::vector<glm::mat4>& outputTransforms, const float absoluteTime, const AnimationNode_ node, const glm::mat4 parentTransform) {
+		BlendNodeHierarchy([&](auto boneIndex, const auto& combinedTransform, const auto& parentTransform, const auto& outputTransform) {
+			outputTransforms[boneIndex] = mGlobalInverseTransform * outputTransform;
+			}, absoluteTime, node, parentTransform);
+	}
 
-		const auto it = mAnimationSet->mBoneMappings.find(node->mName); // TODO: node->mBoneIndex?
-		if (it != mAnimationSet->mBoneMappings.end()) {
-			const auto boneIndex = it->second;
-			finalTransforms[boneIndex] = combinedTransform * mAnimationSet->mBoneOffsets[boneIndex];
+	void BlendNodeHierarchy(std::function<void(uint32_t, const glm::mat4&, const glm::mat4&, const glm::mat4&)> callback, const float absoluteTime) {
+		const auto& rootNode = mAnimationSet->mAnimations[0]->mRootNode; // FIXME
+		BlendNodeHierarchy(callback, absoluteTime, rootNode, glm::identity<glm::mat4>());
+	}
+
+	void BlendNodeHierarchy(std::function<void(uint32_t, const glm::mat4&, const glm::mat4&, const glm::mat4&)> callback, const float absoluteTime, const AnimationNode_ node, const glm::mat4 parentTransform) {
+		const auto boneIndex = mAnimationSet->GetBoneIndex(node);
+		auto combinedTransform = parentTransform;
+
+		if(boneIndex != -1) {
+			const auto nodeTransform = BlendNode(boneIndex, absoluteTime, node);
+			combinedTransform *= nodeTransform;
+			callback(boneIndex, combinedTransform, parentTransform, combinedTransform * mAnimationSet->mBoneOffsets[boneIndex]);
 		}
 
-		for (auto& childNode : node->mChildren) {
-			ReadNodeHierarchy(finalTransforms, animation, time, childNode, combinedTransform);
+		for(auto& childNode : node->mChildren) {
+			BlendNodeHierarchy(callback, absoluteTime, childNode, combinedTransform);
 		}
+	}
+
+	glm::mat4 BlendNode(const size_t boneIndex, const float absoluteTime, const AnimationNode_ node) {
+		const auto minWeight = 0.005f;
+		float totalWeight = 0.0f;
+		for(auto& [k, w] : mAnimationWeights) {
+			if(w < minWeight) continue;
+			totalWeight += w;
+		}
+
+		glm::vec3 translation = { 0, 0, 0 };
+		glm::quat rotation = glm::identity<glm::quat>();
+		glm::vec3 scale = { 0, 0, 0 };
+
+		for(auto& [k, w] : mAnimationWeights) {
+			if(w < minWeight) continue;
+			const auto animationWeight = w / totalWeight;
+			auto& animation = mAnimationSet->mAnimations[k];
+			const auto animationTime = animation->GetAnimationTime(absoluteTime);
+			auto track = animation->GetAnimationTrack(node->mName);
+			if(track == nullptr) continue; // node->mTransform?????? FIXME!
+			translation += track->InterpolateTranslation(animationTime) * animationWeight;
+			rotation *= glm::slerp(glm::identity<glm::quat>(), track->InterpolateRotation(animationTime), animationWeight);
+			scale += track->InterpolateScale(animationTime) * animationWeight;
+		}
+
+		auto nodeTransform = glm::translate(glm::identity<glm::mat4>(), translation);
+		nodeTransform *= glm::mat4_cast(rotation);
+		nodeTransform = glm::scale(nodeTransform, scale);
+
+		return nodeTransform;
 	}
 };
 typedef std::shared_ptr<AnimationController> AnimationController_;

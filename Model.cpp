@@ -60,7 +60,7 @@ ModelNode_ LoadNode(Model* model, const aiScene* scene, const aiNode* node, Mode
         const auto nodeMesh = scene->mMeshes[node->mMeshes[meshIndex]]; // TODO: Shared meshes?
         auto mesh = std::make_shared<Mesh>();
         auto debugColor = RandomColor();
-        
+
         mesh->mVertices.resize(nodeMesh->mNumVertices);
         auto vertexPointer = mesh->mVertices.data();
         for (unsigned int vertexIndex = 0; vertexIndex < nodeMesh->mNumVertices; ++vertexIndex) {
@@ -127,10 +127,8 @@ AnimationNode_ LoadHierarchy(Model* model, const aiNode* node, AnimationNode_ pa
 void LoadAnimations(Model* model, const aiScene* scene) {
     //if (scene->mNumAnimations < 1) return;
 
-    // FIXME: Store elsewhere?
-    if (!model->mAnimationSet) {
+    if(nullptr == model->mAnimationSet) {
         model->mAnimationSet = std::make_shared<AnimationSet>();
-        model->mAnimationSet->mGlobalInverseTransform = FindGlobalInverseTransform(scene); // FIXME
     }
 
     for (unsigned int animationIndex = 0; animationIndex < scene->mNumAnimations; ++animationIndex) {
@@ -170,12 +168,13 @@ void LoadAnimations(Model* model, const aiScene* scene) {
 
 const aiScene* LoadScene(const std::string& fileName, const ModelOptions& options) {
     auto props = aiCreatePropertyStore();
-    auto target = aiProcess_CalcTangentSpace | aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_LimitBoneWeights;
-    auto scene = aiImportFile(fileName.c_str(), target);
+    if(1.0f != options.mScale) aiSetImportPropertyFloat(props, AI_CONFIG_GLOBAL_SCALE_FACTOR_KEY, options.mScale);
+    auto target = aiProcess_GlobalScale | aiProcess_CalcTangentSpace | aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_LimitBoneWeights;
+    auto scene = aiImportFileExWithProperties(fileName.c_str(), target, nullptr, props);
+    aiReleasePropertyStore(props);
     if (nullptr == scene) {
         throw new std::runtime_error(aiGetErrorString());
     }
-    scene->mRootNode->mTransformation.Scaling(aiVector3D(options.mScale, options.mScale, options.mScale), scene->mRootNode->mTransformation); // FIXME
     return scene;
 }
 
@@ -184,8 +183,10 @@ void Model::Load(const std::string& fileName, const ModelOptions& options) {
     mName = fileName;
     mRootNode.reset();
     mAnimationSet.reset();
+    mGlobalInverseTransform = FindGlobalInverseTransform(scene);
     LoadAnimations(this, scene);
     mRootNode = LoadNode(this, scene, scene->mRootNode);
+    if(!options.mAnimations && mAnimationSet) mAnimationSet->mAnimations.clear(); // FIXME!
     aiReleaseImport(scene);
     UpdateAABB();
 }

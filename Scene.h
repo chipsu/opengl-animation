@@ -18,7 +18,7 @@ struct Entity {
 
 	void Init() {
 		if (mModel && mModel->mAnimationSet) {
-			mAnimationController = std::make_shared<AnimationController>(mModel->mAnimationSet);
+			mAnimationController = std::make_shared<AnimationController>(mModel->mAnimationSet, mModel->mGlobalInverseTransform);
 			mAnimationController->SetAnimationIndex(0);
 		}
 	}

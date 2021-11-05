@@ -28,6 +28,7 @@
 #include <initializer_list>
 #include <list>
 #include <deque>
+#include <unordered_map>
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>

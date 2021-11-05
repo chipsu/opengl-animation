@@ -149,7 +149,6 @@ int main(const int argc, const char **argv) {
 	const GLuint uViewPos = glGetUniformLocation(program->mID, "uViewPos");
 	const GLuint uLightColor = glGetUniformLocation(program->mID, "uLightColor");
 
-	bool animDetails = false;
 	bool modelDetails = true;
 
 	glm::vec3 lightPos = { 100.0f, 100.0f, 100.0f };
@@ -222,17 +221,14 @@ int main(const int argc, const char **argv) {
 		}
 
 		if (selectedModel && scene->mSelected->mAnimationController) {
-			const auto ac = scene->mSelected->mAnimationController;
-			const auto as = ac->mAnimationSet;
+			const auto& ac = scene->mSelected->mAnimationController;
+			const auto& as = ac->mAnimationSet;
 			ImGui::Begin("Animations");
 
-			ImGui::Text(ac->GetAnimationEnabled() ? ac->GetAnimation()->mName.c_str() : "DISABLED");
-
-			ImGui::Checkbox("Animation info", &animDetails);
-			if (animDetails) {
-				for (const auto& anim : as->mAnimations) {
-					ImGui::Text("Animation: %s, %f", anim->mName.c_str(), anim->mDuration);
-				}
+			for(size_t animIndex = 0; animIndex < as->mAnimations.size(); ++animIndex) {
+				auto& anim = as->mAnimations[animIndex];
+				std::string name = std::to_string(animIndex) + ": " + anim->mName + " - " + std::to_string(anim->mDuration);
+				ImGui::SliderFloat(name.c_str(), &ac->mAnimationWeights[animIndex], 0.0f, 1.0f);
 			}
 
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);

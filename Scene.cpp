@@ -17,6 +17,9 @@ void Scene::Load(const std::string& fileName) {
 			if (opts.HasMember("scale")) {
 				modelOptions.mScale = opts["scale"].GetFloat();
 			}
+			if(opts.HasMember("animations")) {
+				modelOptions.mAnimations = opts["animations"].GetBool();
+			}
 		}
 		model->Load(cfg["model"].GetString(), modelOptions);
 		if (cfg.HasMember("animations")) {
