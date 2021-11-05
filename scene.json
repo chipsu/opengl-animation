@@ -1,0 +1,21 @@
+{
+  "entities": [
+    {
+      "position": [ 0, 0, 0 ],
+      "scale": [ 1, 1, 1 ],
+      "model": "mixamo.com/xbot.fbx",
+      "animations": [
+        "mixamo.com/Arms Hip Hop Dance.fbx",
+        "mixamo.com/Fast Run.fbx",
+        "mixamo.com/Hip Hop Dancing.fbx",
+        "mixamo.com/Idle.fbx",
+        "mixamo.com/Loser.fbx",
+        "mixamo.com/Walking.fbx"
+      ],
+      "modelOptions": {
+        "scale": 0.25,
+        "animations": false
+      }
+    }
+  ]
+}
