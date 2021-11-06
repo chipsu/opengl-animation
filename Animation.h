@@ -100,7 +100,6 @@ struct Animation {
 	std::vector<AnimationTrack_> mAnimationTracks;
 	float mTicksPerSecond = 0;
 	float mDuration = 0;
-	AnimationNode_ mRootNode;
 
 	// TODO: Map by Name
 	AnimationTrack_ GetAnimationTrack(const std::string& name) const {
@@ -132,6 +131,7 @@ struct AnimationSet {
 	std::vector<Animation_> mAnimations;
 	std::unordered_map<std::string, uint32_t> mBoneMappings;
 	std::vector<glm::mat4> mBoneOffsets;
+	AnimationNode_ mRootNode;
 
 	size_t GetAnimationIndex(const std::string& name) const {
 		for (size_t i = 0; i < mAnimations.size(); ++i) {
@@ -199,8 +199,7 @@ struct AnimationController {
 	}
 
 	void BlendNodeHierarchy(std::vector<glm::mat4>& outputTransforms, float absoluteTime) {
-		const auto& rootNode = mAnimationSet->mAnimations[0]->mRootNode; // FIXME
-		BlendNodeHierarchy(outputTransforms, absoluteTime, rootNode, glm::identity<glm::mat4>());
+		BlendNodeHierarchy(outputTransforms, absoluteTime, mAnimationSet->mRootNode, glm::identity<glm::mat4>());
 	}
 
 	void BlendNodeHierarchy(std::vector<glm::mat4>& outputTransforms, const float absoluteTime, const AnimationNode_ node, const glm::mat4 parentTransform) {
@@ -210,8 +209,7 @@ struct AnimationController {
 	}
 
 	void BlendNodeHierarchy(std::function<void(uint32_t, const glm::mat4&, const glm::mat4&, const glm::mat4&)> callback, const float absoluteTime) {
-		const auto& rootNode = mAnimationSet->mAnimations[0]->mRootNode; // FIXME
-		BlendNodeHierarchy(callback, absoluteTime, rootNode, glm::identity<glm::mat4>());
+		BlendNodeHierarchy(callback, absoluteTime, mAnimationSet->mRootNode, glm::identity<glm::mat4>());
 	}
 
 	void BlendNodeHierarchy(std::function<void(uint32_t, const glm::mat4&, const glm::mat4&, const glm::mat4&)> callback, const float absoluteTime, const AnimationNode_ node, const glm::mat4 parentTransform) {

@@ -129,6 +129,7 @@ void LoadAnimations(Model* model, const aiScene* scene) {
 
     if(nullptr == model->mAnimationSet) {
         model->mAnimationSet = std::make_shared<AnimationSet>();
+        model->mAnimationSet->mRootNode = LoadHierarchy(model, scene->mRootNode);
     }
 
     for (unsigned int animationIndex = 0; animationIndex < scene->mNumAnimations; ++animationIndex) {
@@ -138,7 +139,6 @@ void LoadAnimations(Model* model, const aiScene* scene) {
         animation->mName = aAnimation->mName.data;
         animation->mTicksPerSecond = (float)aAnimation->mTicksPerSecond;
         animation->mDuration = (float)aAnimation->mDuration;
-        animation->mRootNode = LoadHierarchy(model, scene->mRootNode);
 
         for (unsigned int channelIndex = 0; channelIndex < aAnimation->mNumChannels; ++channelIndex) {
             const auto aChannel = aAnimation->mChannels[channelIndex];
