@@ -163,6 +163,8 @@ int main(const int argc, const char **argv) {
 	FrameCounter<float> fps;
 	Timer<float> timer;
 
+	std::unordered_map<size_t, bool> animWeightBonesTest;
+
 	while (!glfwWindowShouldClose(window)) {
 		timer.Update();
 
@@ -226,9 +228,21 @@ int main(const int argc, const char **argv) {
 			ImGui::Begin("Animations");
 
 			for(size_t animIndex = 0; animIndex < as->mAnimations.size(); ++animIndex) {
+				ImGui::PushID(animIndex);
 				auto& anim = as->mAnimations[animIndex];
 				std::string name = std::to_string(animIndex) + ": " + anim->mName + " - " + std::to_string(anim->mDuration);
+				if(ImGui::Button("Bones")) {
+					animWeightBonesTest[animIndex] = !animWeightBonesTest[animIndex];
+				}
+				ImGui::SameLine();
 				ImGui::SliderFloat(name.c_str(), &ac->mAnimationWeights[animIndex], 0.0f, 1.0f);
+				if(animWeightBonesTest[animIndex]) {
+					auto& disabledBones = ac->mDisabledBones[animIndex];
+					for(const auto& [boneName, boneIndex] : as->mBoneMappings) {
+						ImGui::Checkbox(boneName.c_str(), &disabledBones[boneIndex]);
+					}
+				}
+				ImGui::PopID();
 			}
 
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);

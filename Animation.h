@@ -172,6 +172,7 @@ typedef std::shared_ptr<AnimationSet> AnimationSet_;
 struct AnimationController {
 	AnimationSet_ mAnimationSet;
 	std::unordered_map<size_t, float> mAnimationWeights;
+	std::unordered_map<size_t, std::unordered_map<size_t, bool>> mDisabledBones;
 	std::vector<glm::mat4> mFinalTransforms;
 	glm::mat4 mGlobalInverseTransform;
 
@@ -232,6 +233,7 @@ struct AnimationController {
 		float totalWeight = 0.0f;
 		for(auto& [k, w] : mAnimationWeights) {
 			if(w < minWeight) continue;
+			if(mDisabledBones[k][boneIndex]) continue;
 			totalWeight += w;
 		}
 
@@ -241,6 +243,7 @@ struct AnimationController {
 
 		for(auto& [k, w] : mAnimationWeights) {
 			if(w < minWeight) continue;
+			if(mDisabledBones[k][boneIndex]) continue;
 			const auto animationWeight = w / totalWeight;
 			auto& animation = mAnimationSet->mAnimations[k];
 			const auto animationTime = animation->GetAnimationTime(absoluteTime);

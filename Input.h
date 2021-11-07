@@ -2,6 +2,7 @@
 
 #include "Main.h"
 #include "Scene.h"
+#include "UI.h"
 
 struct Input {
 	static Input* sInstance;
@@ -57,6 +58,7 @@ struct Input {
 	}
 
 	void OnMousePos(GLFWwindow* window, double xpos, double ypos) {
+		if(ImGui::GetIO().WantCaptureMouse) return;
 		if (false) printf("cursor_position_callback: %f %f\n", xpos, ypos);
 		if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS) {
 			mScene->mCameraRotationX += (mMouseX - xpos) * 0.025f;
@@ -69,10 +71,12 @@ struct Input {
 	}
 
 	void OnMouseButton(GLFWwindow* window, int button, int action, int mods) {
+		if(ImGui::GetIO().WantCaptureMouse) return;
 		if (false) printf("mouse_button_callback: %d %d %d\n", button, action, mods);
 	}
 
 	void OnMouseScroll(GLFWwindow* window, double xoffset, double yoffset) {
+		if(ImGui::GetIO().WantCaptureMouse) return;
 		if (false) printf("scroll_callback: %f %f\n", xoffset, yoffset);
 		const float scale = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? 10.0f : 1.0f;
 		mScene->mCameraDistance -= (float)yoffset * scale;
