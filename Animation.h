@@ -172,7 +172,7 @@ typedef std::shared_ptr<AnimationSet> AnimationSet_;
 struct AnimationController {
 	AnimationSet_ mAnimationSet;
 	std::unordered_map<size_t, float> mAnimationWeights;
-	std::unordered_map<size_t, std::unordered_map<size_t, bool>> mDisabledBones;
+	std::unordered_map<size_t, std::unordered_map<size_t, bool>> mDisabledBones; // FIXME: Experimental
 	std::vector<glm::mat4> mFinalTransforms;
 	glm::mat4 mGlobalInverseTransform;
 
