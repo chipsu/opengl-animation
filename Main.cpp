@@ -238,6 +238,20 @@ int main(const int argc, const char **argv) {
 				ImGui::SliderFloat(name.c_str(), &ac->mAnimationWeights[animIndex], 0.0f, 1.0f);
 				if(animWeightBonesTest[animIndex]) {
 					auto& disabledBones = ac->mDisabledBones[animIndex];
+					auto disableNode = [&disabledBones](auto& node, auto& self) -> void {
+						if(node->mCachedBoneIndex >= 0) disabledBones[node->mCachedBoneIndex] = !disabledBones[node->mCachedBoneIndex];
+						for(auto& child : node->mChildren) self(child, self);
+					};
+					auto nodes = [&disableNode](auto& node, auto& self) -> void {
+						if(ImGui::TreeNode(node.get(), node->mName.c_str())) {
+							if(ImGui::Button("Toggle")) {
+								disableNode(node, disableNode);
+							}
+							for(auto& child : node->mChildren) self(child, self);
+							ImGui::TreePop();
+						}
+					};
+					nodes(as->mRootNode, nodes);
 					for(const auto& [boneName, boneIndex] : as->mBoneMappings) {
 						ImGui::Checkbox(boneName.c_str(), &disabledBones[boneIndex]);
 					}
