@@ -219,6 +219,14 @@ int main(const int argc, const char **argv) {
 					glm::length(selectedModel->mAABB.mHalfSize) * 2.0f
 				);
 			}
+
+			if(ImGui::SliderFloat3("Light Pos", &lightPos[0], -100, 100)) {
+				glUniform3fv(uLightPos, 1, (GLfloat*)&lightPos[0]);
+			}
+
+			if(ImGui::ColorPicker3("Light Color", &lightColor[0])) {
+				glUniform3fv(uLightColor, 1, (GLfloat*)&lightColor[0]);
+			}
 		}
 
 		if (selectedModel && scene->mSelected->mAnimationController) {
