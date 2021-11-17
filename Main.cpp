@@ -41,7 +41,6 @@ Scene_ CreateScene(const int argc, const char** argv) {
 ShaderProgram_ CreateShaderProgram() {
 	std::vector<Shader_> shaders;
 	shaders.push_back(std::make_shared<Shader>("default.vert.glsl", GL_VERTEX_SHADER));
-	shaders.push_back(std::make_shared<Shader>("default.geom.glsl", GL_GEOMETRY_SHADER));
 	shaders.push_back(std::make_shared<Shader>("default.frag.glsl", GL_FRAGMENT_SHADER));
 	return std::make_shared<ShaderProgram>(shaders);
 }
