@@ -237,6 +237,8 @@ struct AnimationController {
 			totalWeight += w;
 		}
 
+		if(totalWeight == 0.0f) return node->mTransform;
+
 		glm::vec3 translation = { 0, 0, 0 };
 		glm::quat rotation = glm::identity<glm::quat>();
 		glm::vec3 scale = { 0, 0, 0 };

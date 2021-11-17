@@ -23,7 +23,7 @@ void main() {
         boneTransform += uBones[inBoneIndices[1]] * inBoneWeights[1];
         boneTransform += uBones[inBoneIndices[2]] * inBoneWeights[2];
         boneTransform += uBones[inBoneIndices[3]] * inBoneWeights[3];
-    
+
         gl_Position = uProj * uView * uModel * boneTransform * vec4(inPosition, 1.0);
     } else {
         gl_Position = uProj * uView * uModel * vec4(inPosition, 1.0);
@@ -35,5 +35,5 @@ void main() {
     //outColor = vec3(inBoneIndices[0], inBoneIndices[1], inBoneIndices[2]);
 
     outPosition = vec3(uModel * vec4(inPosition, 1.0));
-    outNormal = mat3(transpose(inverse(uModel))) * inNormal; 
+    outNormal = mat3(transpose(inverse(uModel))) * inNormal;
 }
