@@ -164,6 +164,8 @@ int main(const int argc, const char **argv) {
 
 	std::unordered_map<size_t, bool> animWeightBonesTest;
 	std::unordered_map<size_t, bool> animTracksBonesTest;
+	bool overrideTime = false;
+	float overrideTimeValue = 0.0f;
 
 	while (!glfwWindowShouldClose(window)) {
 		timer.Update();
@@ -204,7 +206,7 @@ int main(const int argc, const char **argv) {
 		cam.UpdateView();
 		cam.UpdateProjection();
 
-		scene->Update(timer.mNow, timer.mDelta);
+		scene->Update(overrideTime ? overrideTimeValue : timer.mNow);
 
 		ui->NewFrame();
 
@@ -234,6 +236,14 @@ int main(const int argc, const char **argv) {
 			const auto& ac = scene->mSelected->mAnimationController;
 			const auto& as = ac->mAnimationSet;
 			ImGui::Begin("Animations");
+
+			auto maxDuration = std::max_element(as->mAnimations.begin(), as->mAnimations.end(), [](auto& a, auto& b) {
+				return a->mDuration > b->mDuration;
+			});
+			ImGui::Checkbox("Override", &overrideTime);
+			ImGui::SameLine();
+			if(!overrideTime) overrideTimeValue = fmod(timer.mNow, (*maxDuration)->mDuration);
+			ImGui::SliderFloat("Time", &overrideTimeValue, 0.0f, (*maxDuration)->mDuration);
 
 			for(size_t animIndex = 0; animIndex < as->mAnimations.size(); ++animIndex) {
 				auto& anim = as->mAnimations[animIndex];

@@ -23,7 +23,7 @@ struct Entity {
 		}
 	}
 
-	void Update(float absoluteTime, float deltaTime) {
+	void Update(float absoluteTime) {
 		if (mAnimationController) {
 			mAnimationController->Update(absoluteTime);
 		}
@@ -57,9 +57,9 @@ struct Scene {
 		}
 	}
 
-	void Update(float absoluteTime, float deltaTime) {
+	void Update(float absoluteTime) {
 		for (auto& entity : mEntities) {
-			entity->Update(absoluteTime, deltaTime);
+			entity->Update(absoluteTime);
 		}
 	}
 
