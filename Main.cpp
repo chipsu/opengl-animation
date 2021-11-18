@@ -164,13 +164,11 @@ int main(const int argc, const char **argv) {
 
 	std::unordered_map<size_t, bool> animWeightBonesTest;
 	std::unordered_map<size_t, bool> animTracksBonesTest;
-	bool overrideTime = false;
-	float overrideTimeValue = 0.0f;
 
 	while (!glfwWindowShouldClose(window)) {
-		timer.Update();
+		const auto deltaTime = timer.Update();
 
-		if (fps.Tick(timer.mNow)) {
+		if (fps.Tick(timer.mTime)) {
 			glfwSetWindowTitle(window, (windowTitle + " - FPS: " + std::to_string(fps.mValue)).c_str());
 		}
 
@@ -198,15 +196,15 @@ int main(const int argc, const char **argv) {
 				cam.mPos = targetPos;
 				cam.mFront = glm::normalize(selectedCenter - cam.mPos);
 			} else {
-				cam.mPos = glm::lerp(cam.mPos, targetPos, timer.mDelta * camSpeed);
-				cam.mFront = glm::lerp(cam.mFront, glm::normalize(selectedCenter - cam.mPos), timer.mDelta * camSpeed);
+				cam.mPos = glm::lerp(cam.mPos, targetPos, deltaTime * camSpeed);
+				cam.mFront = glm::lerp(cam.mFront, glm::normalize(selectedCenter - cam.mPos), deltaTime * camSpeed);
 			}
 		}
 
 		cam.UpdateView();
 		cam.UpdateProjection();
 
-		scene->Update(overrideTime ? overrideTimeValue : timer.mNow);
+		scene->Update(timer.mTime);
 
 		ui->NewFrame();
 
@@ -240,10 +238,11 @@ int main(const int argc, const char **argv) {
 			auto maxDuration = std::max_element(as->mAnimations.begin(), as->mAnimations.end(), [](auto& a, auto& b) {
 				return a->mDuration > b->mDuration;
 			});
-			ImGui::Checkbox("Override", &overrideTime);
-			ImGui::SameLine();
-			if(!overrideTime) overrideTimeValue = fmod(timer.mNow, (*maxDuration)->mDuration);
-			ImGui::SliderFloat("Time", &overrideTimeValue, 0.0f, (*maxDuration)->mDuration);
+			auto animTime = fmod(timer.mTime, (*maxDuration)->mDuration);
+			if(ImGui::SliderFloat("Time", &animTime, 0.0f, (*maxDuration)->mDuration)) {
+				timer.Set(animTime);
+			}
+			ImGui::SliderFloat("Speed", &timer.mScale, 0.0f, 2.0f);
 
 			for(size_t animIndex = 0; animIndex < as->mAnimations.size(); ++animIndex) {
 				auto& anim = as->mAnimations[animIndex];

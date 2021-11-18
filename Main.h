@@ -73,14 +73,34 @@ size_t SplitString(const std::string& str, const std::string& delim, T &result) 
 
 template<typename T>
 struct Timer {
-	T mNow = 0;
-	T mDelta = 0;
+	T mTime = 0;
 	T mLastUpdate = 0;
+	T mScale = 1;
 
-	void Update() {
-		mNow = (T)glfwGetTime();
-		mDelta = mNow - mLastUpdate;
-		mLastUpdate = mNow;
+	Timer() {
+		Reset();
+	}
+
+	void Set(T time) {
+		mTime = time;
+		mLastUpdate = (T)glfwGetTime();
+	}
+
+	void Reset() {
+		Set(0);
+		mScale = 1;
+	}
+
+	T Update() {
+		auto now = (T)glfwGetTime();
+		if(mScale == 0) {
+			mLastUpdate = now;
+			return 0;
+		}
+		auto delta = now - mLastUpdate;
+		mTime += delta * mScale;
+		mLastUpdate = now;
+		return delta;
 	}
 };
 
