@@ -161,14 +161,16 @@ int main(const int argc, const char **argv) {
 
 	FrameCounter<float> fps;
 	Timer<float> timer;
+	Timer<float> inputTimer;
 
 	std::unordered_map<size_t, bool> animWeightBonesTest;
 	std::unordered_map<size_t, bool> animTracksBonesTest;
 
 	while (!glfwWindowShouldClose(window)) {
 		const auto deltaTime = timer.Update();
+		const auto inputDelta = inputTimer.Update();
 
-		if (fps.Tick(timer.mTime)) {
+		if (fps.Tick(glfwGetTime())) {
 			glfwSetWindowTitle(window, (windowTitle + " - FPS: " + std::to_string(fps.mValue)).c_str());
 		}
 
@@ -196,8 +198,8 @@ int main(const int argc, const char **argv) {
 				cam.mPos = targetPos;
 				cam.mFront = glm::normalize(selectedCenter - cam.mPos);
 			} else {
-				cam.mPos = glm::lerp(cam.mPos, targetPos, deltaTime * camSpeed);
-				cam.mFront = glm::lerp(cam.mFront, glm::normalize(selectedCenter - cam.mPos), deltaTime * camSpeed);
+				cam.mPos = glm::lerp(cam.mPos, targetPos, inputDelta * camSpeed);
+				cam.mFront = glm::lerp(cam.mFront, glm::normalize(selectedCenter - cam.mPos), inputDelta * camSpeed);
 			}
 		}
 

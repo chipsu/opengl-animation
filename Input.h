@@ -39,19 +39,7 @@ struct Input {
 	void OnKey(GLFWwindow* window, int key, int scancode, int action, int mods) {
 		if (false) printf("key_callback: %d %d %d\n", key, action, mods);
 		if (action == GLFW_RELEASE) {
-			auto& entity = mScene->mSelected;
-			if (nullptr != entity) {
-				auto& animationController = entity->mAnimationController;
-				if (key == GLFW_KEY_SPACE) {
-					/*size_t animationIndex = animationController->GetAnimationIndex() + 1;
-					if (animationIndex >= animationController->GetAnimationCount()) animationIndex = -1;
-					animationController->SetAnimationIndex(animationIndex);
-					const auto animation = animationController->GetAnimation();
-					std::cout << "Animation: " << animationIndex << ", " << (animation ? animation->mName : "DISABLED") << std::endl;*/
-					animationController->SetAnimationIndex(0);
-				}
-			}
-			if (key == GLFW_KEY_TAB) {
+			if (key == GLFW_KEY_SPACE) {
 				mScene->SelectNext();
 			}
 		}
@@ -78,9 +66,9 @@ struct Input {
 	void OnMouseScroll(GLFWwindow* window, double xoffset, double yoffset) {
 		if(ImGui::GetIO().WantCaptureMouse) return;
 		if (false) printf("scroll_callback: %f %f\n", xoffset, yoffset);
-		const float scale = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? 10.0f : 1.0f;
+		const float scale = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? 5.0f : 0.25f;
 		mScene->mCameraDistance -= (float)yoffset * scale;
-		mScene->mCameraDistance = glm::clamp(mScene->mCameraDistance, 1.0f, 1000.0f);
+		mScene->mCameraDistance = glm::clamp(mScene->mCameraDistance, mScene->mSelected ? mScene->mSelected->GetMinDistance() : 0.5f, 1000.0f);
 		//printf("SCROLL: %f\n", mScene->mCameraDistance);
 	}
 };

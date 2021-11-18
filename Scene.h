@@ -36,6 +36,10 @@ struct Entity {
 	void Strafe(float f) {
 		mPos += glm::normalize(glm::cross(mFront, mUp)) * f;
 	}
+
+	float GetMinDistance() const {
+		return  glm::length(mModel->mAABB.mHalfSize) * 2.0f; // FIXME;
+	}
 };
 typedef std::shared_ptr<Entity> Entity_;
 
@@ -65,12 +69,12 @@ struct Scene {
 
 	void SelectNext() {
 		mSelectedIndex++;
-		if (mSelectedIndex > mEntities.size()) {
+		if (mSelectedIndex >= mEntities.size()) {
 			mSelectedIndex = 0;
 		}
 		mSelected = mSelectedIndex < mEntities.size() ? mEntities[mSelectedIndex] : nullptr;
 		if (nullptr != mSelected) {
-			mCameraDistance = glm::length(mSelected->mModel->mAABB.mHalfSize) * 2.0f; // FIXME
+			mCameraDistance = mSelected->GetMinDistance();
 		}
 	}
 };
