@@ -148,8 +148,6 @@ int main(const int argc, const char **argv) {
 	const GLuint uViewPos = glGetUniformLocation(program->mID, "uViewPos");
 	const GLuint uLightColor = glGetUniformLocation(program->mID, "uLightColor");
 
-	bool modelDetails = true;
-
 	glm::vec3 lightPos = { 100.0f, 100.0f, 100.0f };
 	glm::vec3 lightColor = { 1.0f, 1.0f, 1.0f };
 	glUniform3fv(uLightPos, 1, (GLfloat*)&lightPos[0]);
@@ -212,16 +210,12 @@ int main(const int argc, const char **argv) {
 
 		auto selectedModel = scene->mSelected ? scene->mSelected->mModel : nullptr;
 		if (selectedModel) {
-			ImGui::Checkbox("Model info", &modelDetails);
-
-			if (modelDetails) {
-				ImGui::Text("Name: %s", selectedModel->mName.c_str());
-				ImGui::Text("Model: c=%s, s=%s | length=%f",
-					glm::to_string(selectedModel->mAABB.mCenter).c_str(),
-					glm::to_string(selectedModel->mAABB.mHalfSize).c_str(),
-					glm::length(selectedModel->mAABB.mHalfSize) * 2.0f
-				);
-			}
+			ImGui::Text("Name: %s", selectedModel->mName.c_str());
+			ImGui::Text("Model: c=%s, s=%s | length=%f",
+				glm::to_string(selectedModel->mAABB.mCenter).c_str(),
+				glm::to_string(selectedModel->mAABB.mHalfSize).c_str(),
+				glm::length(selectedModel->mAABB.mHalfSize) * 2.0f
+			);
 
 			if(ImGui::SliderFloat3("Light Pos", &lightPos[0], -100, 100)) {
 				glUniform3fv(uLightPos, 1, (GLfloat*)&lightPos[0]);
@@ -259,6 +253,8 @@ int main(const int argc, const char **argv) {
 				}
 				ImGui::SameLine();
 				ImGui::SliderFloat(name.c_str(), &ac->mAnimationWeights[animIndex], 0.0f, 1.0f);
+				animTime = fmod(timer.mTime, anim->mDuration); // TOOD: Move animation details to new window?
+				ImGui::SliderFloat("Time", &animTime, 0.0f, anim->mDuration);
 				if(animWeightBonesTest[animIndex]) {
 					auto& disabledBones = ac->mDisabledBones[animIndex];
 					auto disableNode = [&disabledBones](auto& node, auto& self) -> void {
