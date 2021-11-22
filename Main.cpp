@@ -3,8 +3,10 @@
 #include "Shader.h"
 #include "Input.h"
 #include "UI.h"
+#include "Debug.h"
 
 Input* Input::sInstance = nullptr;
+DebugOverlay* gDebugOverlay = nullptr;
 
 Scene_ CreateScene(const int argc, const char** argv) {
 	auto scene = std::make_shared<Scene>();
@@ -38,53 +40,10 @@ Scene_ CreateScene(const int argc, const char** argv) {
 	return scene;
 }
 
-ShaderProgram_ CreateShaderProgram() {
-	std::vector<Shader_> shaders;
-	shaders.push_back(std::make_shared<Shader>("default.vert.glsl", GL_VERTEX_SHADER));
-	shaders.push_back(std::make_shared<Shader>("default.frag.glsl", GL_FRAGMENT_SHADER));
-	return std::make_shared<ShaderProgram>(shaders);
-}
-
 float get_deque(void* data, int idx) {
 	auto deque = (std::deque<float>*)data;
 	return deque->at(idx);
 }
-
-struct Camera {
-	glm::vec3 mPos = { 0,0,0 };
-	glm::vec3 mFront = { 0,0,1 };
-	glm::vec3 mUp = { 0,1,0 };
-	glm::vec3 mLeft = { 1,0,0 };
-
-	float mFov = glm::radians(45.0f);
-	float mAspect = 1.0f;
-	float mNear = 0.1f;
-	float mFar = 1000.0f;
-
-	glm::mat4 mView;
-	glm::mat4 mProjection;
-
-	void Look(float yaw, float pitch) {
-		glm::vec3 dir = {
-			cos(glm::radians(yaw)) * cos(glm::radians(pitch)),
-			sin(glm::radians(pitch)),
-			sin(glm::radians(yaw)) * cos(glm::radians(pitch)),
-		};
-		mFront = glm::normalize(dir);
-	}
-
-	void SetAspect(int width, int height) {
-		mAspect = width / (float)height;
-	}
-
-	void UpdateView() {
-		mView = glm::lookAt(mPos, mPos + mFront, mUp);
-	}
-
-	void UpdateProjection() {
-		mProjection = glm::perspective(mFov, mAspect, mNear, mFar);
-	}
-};
 
 void RenderNode(GLint uniformModel, ModelNode_ node, const glm::mat4& parentTransform) {
 	glm::mat4 transform = parentTransform * node->mTransform;
@@ -98,6 +57,21 @@ void RenderNode(GLint uniformModel, ModelNode_ node, const glm::mat4& parentTran
 		RenderNode(uniformModel, childNode, transform);
 	}
 };
+
+void RenderSkeleton(Model_ model, AnimationController_ ac, float now, const glm::mat4& parentTransform, bool points, bool lines) {
+	int counter = 0;
+	ac->BlendNodeHierarchy([parentTransform, points, lines, &counter](auto index, const auto& t, const auto& pt, const auto& ot) {
+		if(++counter < 2) return;
+		auto p = parentTransform * t * glm::vec4(0, 0, 0, 1.0f);
+		if(points) {
+			gDebugOverlay->AddPoint(DebugPoint(p.x, p.y, p.z, 0.02f));
+		}
+		if(lines) {
+			auto p2 = parentTransform * pt * glm::vec4(0, 0, 0, 1.0f);
+			gDebugOverlay->AddLine({ {p.x, p.y, p.z}, { p2.x, p2.y, p2.z }, {1,1,0} });
+		}
+	}, now);
+}
 
 int main(const int argc, const char **argv) {
 	if (!glfwInit()) {
@@ -126,6 +100,9 @@ int main(const int argc, const char **argv) {
 		return -1;
 	}
 
+	gDebugOverlay = new DebugOverlay;
+	gDebugOverlay->mDepthTest = false;
+
 	auto scene = CreateScene(argc, argv);
 	auto input = std::make_shared<Input>(window, scene);
 
@@ -135,10 +112,7 @@ int main(const int argc, const char **argv) {
 
 	auto ui = std::make_shared<UI>(window);
 
-	auto program = CreateShaderProgram();
-	glUseProgram(program->mID);
-
-	glEnable(GL_DEPTH_TEST);
+	auto program = ShaderProgram::Load("default");
 
 	const GLuint uniformProj = glGetUniformLocation(program->mID, "uProj");
 	const GLuint uniformView = glGetUniformLocation(program->mID, "uView");
@@ -150,6 +124,7 @@ int main(const int argc, const char **argv) {
 
 	glm::vec3 lightPos = { 100.0f, 100.0f, 100.0f };
 	glm::vec3 lightColor = { 1.0f, 1.0f, 1.0f };
+	glUseProgram(program->mID);
 	glUniform3fv(uLightPos, 1, (GLfloat*)&lightPos[0]);
 	glUniform3fv(uLightColor, 1, (GLfloat*)&lightColor[0]);
 
@@ -160,6 +135,8 @@ int main(const int argc, const char **argv) {
 	FrameCounter<float> fps;
 	Timer<float> timer;
 	Timer<float> inputTimer;
+	bool debugSkeleton = true;
+	bool debugNodes = true;
 
 	std::unordered_map<size_t, bool> animWeightBonesTest;
 	std::unordered_map<size_t, bool> animTracksBonesTest;
@@ -176,6 +153,9 @@ int main(const int argc, const char **argv) {
 
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glEnable(GL_DEPTH_TEST);
+		glUseProgram(program->mID);
 
 		glfwPollEvents();
 
@@ -210,6 +190,8 @@ int main(const int argc, const char **argv) {
 
 		auto selectedModel = scene->mSelected ? scene->mSelected->mModel : nullptr;
 		if (selectedModel) {
+			ImGui::Checkbox("Debug Skeleton", &debugSkeleton);
+			ImGui::Checkbox("Debug Nodes", &debugNodes);
 			ImGui::Text("Name: %s", selectedModel->mName.c_str());
 			ImGui::Text("Model: c=%s, s=%s | length=%f",
 				glm::to_string(selectedModel->mAABB.mCenter).c_str(),
@@ -302,7 +284,13 @@ int main(const int argc, const char **argv) {
 			transform *= glm::mat4_cast(entity->mRot);
 			transform = glm::scale(transform, entity->mScale);
 			RenderNode(uniformModel, model->mRootNode, transform);
+			if((debugSkeleton || debugNodes) && entity->mAnimationController) {
+				RenderSkeleton(entity->mModel, entity->mAnimationController, timer.mTime, transform, debugNodes, debugSkeleton);
+			}
 		}
+
+		gDebugOverlay->Render(cam);
+		gDebugOverlay->Clear();
 
 		ui->Render();
 	}

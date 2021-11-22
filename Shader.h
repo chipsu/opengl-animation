@@ -69,5 +69,12 @@ struct ShaderProgram {
 	~ShaderProgram() {
 		glDeleteProgram(mID);
 	}
+
+	static std::shared_ptr<ShaderProgram> Load(const std::string& name) {
+		std::vector<Shader_> shaders;
+		shaders.push_back(std::make_shared<Shader>(name + ".vert.glsl", GL_VERTEX_SHADER));
+		shaders.push_back(std::make_shared<Shader>(name + ".frag.glsl", GL_FRAGMENT_SHADER));
+		return std::make_shared<ShaderProgram>(shaders);
+	}
 };
 typedef std::shared_ptr<ShaderProgram> ShaderProgram_;
