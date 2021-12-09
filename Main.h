@@ -59,19 +59,6 @@ inline std::string ReadFile(const std::string& path) {
 }
 
 template<typename T>
-size_t SplitString(const std::string& str, const std::string& delim, T &result) {
-	size_t current = str.find(delim);
-	size_t previous = 0;
-	while (current != std::string::npos) {
-		result.push_back(str.substr(previous, current - previous));
-		previous = current + 1;
-		current = str.find(delim, previous);
-	}
-	result.push_back(str.substr(previous, current - previous));
-	return result.size();
-}
-
-template<typename T>
 struct Timer {
 	T mTime = 0;
 	T mLastUpdate = 0;
@@ -139,7 +126,7 @@ struct Camera {
 	glm::vec3 mPos = { 0,0,0 };
 	glm::vec3 mFront = { 0,0,1 };
 	glm::vec3 mUp = { 0,1,0 };
-	glm::vec3 mLeft = { 1,0,0 };
+	glm::vec3 mRight = { 1,0,0 };
 
 	float mFov = glm::radians(45.0f);
 	float mAspect = 1.0f;

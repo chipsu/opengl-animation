@@ -139,7 +139,7 @@ int main(const int argc, const char **argv) {
 			const auto camOffset = selectedCenter + scene->mSelected->mFront * -scene->mCameraDistance;
 			const auto camCenter = selectedCenter;
 			const auto rotX = glm::rotate(glm::identity<glm::mat4>(), scene->mCameraRotationX, cam.mUp);
-			const auto rotY = glm::rotate(glm::identity<glm::mat4>(), scene->mCameraRotationY, cam.mLeft);
+			const auto rotY = glm::rotate(glm::identity<glm::mat4>(), scene->mCameraRotationY, cam.mRight);
 			const auto posRot = rotX * rotY * glm::vec4(camOffset - camCenter, 1.0f);
 			const auto targetPos = glm::vec3(posRot) + camCenter;
 
