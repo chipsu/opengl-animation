@@ -10,46 +10,17 @@ DebugOverlay* gDebugOverlay = nullptr;
 
 Scene_ CreateScene(const int argc, const char** argv) {
 	auto scene = std::make_shared<Scene>();
-
-	if(argc == 1) {
-		scene->Load("scene.json");
-	} else {
-		bool loadModel = true;
-		for(int i = 1; i < argc; ++i) {
-			std::string arg = argv[i];
-
-			if(arg == "-s") {
-				scene->Load(argv[++i]);
-			} else if(arg == "-m") {
-				loadModel = true;
-			} else if(arg == "-a") {
-				loadModel = false;
-			} else {
-				if(loadModel) {
-					auto model = std::make_shared<Model>();
-					model->Load(arg);
-					scene->mEntities.push_back(std::make_shared<Entity>(model));
-				} else {
-					scene->mEntities.back()->mModel->LoadAnimation(arg, true);
-				}
-			}
-		}
-	}
+	scene->Load(argc == 1 ? "scene.json" : argv[1]);
 	scene->Init();
 	scene->SelectNext();
 	return scene;
 }
 
-float get_deque(void* data, int idx) {
-	auto deque = (std::deque<float>*)data;
-	return deque->at(idx);
-}
-
 void RenderNode(GLint uniformModel, ModelNode_ node, const glm::mat4& parentTransform) {
 	glm::mat4 transform = parentTransform * node->mTransform;
+	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, (GLfloat*)&transform[0]);
 	for (auto& mesh : node->mMeshes) {
 		if (mesh->mHidden) continue;
-		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, (GLfloat*)&transform[0]);
 		mesh->Bind();
 		glDrawElements(GL_TRIANGLES, mesh->mIndices.size(), GL_UNSIGNED_INT, 0);
 	}
