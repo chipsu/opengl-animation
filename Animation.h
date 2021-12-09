@@ -74,13 +74,6 @@ struct AnimationNode {
 
 	AnimationNode(const std::string& name, AnimationNode_ parent, const glm::mat4& transform) : mName(name), mParent(parent), mTransform(transform) {
 	}
-
-	void Recurse(std::function<void(AnimationNode& node)> callback) {
-		callback(*this);
-		for (auto& child : mChildren) {
-			child->Recurse(callback);
-		}
-	}
 };
 typedef AnimationNode::AnimationNode_ AnimationNode_;
 
@@ -92,8 +85,8 @@ struct Animation {
 
 	// TODO: Map by Name
 	AnimationTrack_ GetAnimationTrack(const std::string& name) const {
-		for (const auto& track : mAnimationTracks) {
-			if (track->mName == name) {
+		for(const auto& track : mAnimationTracks) {
+			if(track->mName == name) {
 				return track;
 			}
 		}
@@ -115,8 +108,8 @@ struct AnimationSet {
 	AnimationNode_ mRootNode;
 
 	size_t GetAnimationIndex(const std::string& name) const {
-		for (size_t i = 0; i < mAnimations.size(); ++i) {
-			if (mAnimations[i]->mName == name) {
+		for(size_t i = 0; i < mAnimations.size(); ++i) {
+			if(mAnimations[i]->mName == name) {
 				return i;
 			}
 		}
@@ -210,19 +203,6 @@ struct AnimationController {
 		}
 	}
 
-	std::unordered_map<size_t, float> GetNormalizedWeights(const size_t boneIndex) {
-		std::unordered_map<size_t, float> result;
-		float totalWeight = 0.0f;
-		for(auto& [k, w] : mAnimationWeights) {
-			if(w < mMinWeight) continue;
-			if(mDisabledBones[k][boneIndex]) continue;
-			totalWeight += w;
-			result[k] = w;
-		}
-		for(auto& [k, w] : result) result[k] /= totalWeight;
-		return result;
-	}
-
 	glm::mat4 BlendNode(const size_t boneIndex, const float absoluteTime, const AnimationNode_ node) {
 		const auto weights = GetNormalizedWeights(boneIndex);
 		if(weights.empty()) return node->mTransform;
@@ -246,6 +226,20 @@ struct AnimationController {
 		nodeTransform = glm::scale(nodeTransform, scale);
 
 		return nodeTransform;
+	}
+
+protected:
+	std::unordered_map<size_t, float> GetNormalizedWeights(const size_t boneIndex) {
+		std::unordered_map<size_t, float> result;
+		float totalWeight = 0.0f;
+		for(auto& [k, w] : mAnimationWeights) {
+			if(w < mMinWeight) continue;
+			if(mDisabledBones[k][boneIndex]) continue;
+			totalWeight += w;
+			result[k] = w;
+		}
+		for(auto& [k, w] : result) result[k] /= totalWeight;
+		return result;
 	}
 };
 typedef std::shared_ptr<AnimationController> AnimationController_;
