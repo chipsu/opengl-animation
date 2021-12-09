@@ -1,12 +1,13 @@
 #include "Main.h"
 #include "Scene.h"
 #include "Shader.h"
-#include "Input.h"
 #include "UI.h"
 #include "Debug.h"
 
-Input* Input::sInstance = nullptr;
 DebugOverlay* gDebugOverlay = nullptr;
+double gMouseX = 0;
+double gMouseY = 0;
+Scene* gScene = nullptr;
 
 Scene_ CreateScene(const int argc, const char** argv) {
 	auto scene = std::make_shared<Scene>();
@@ -75,7 +76,7 @@ int main(const int argc, const char **argv) {
 	gDebugOverlay->mDepthTest = false;
 
 	auto scene = CreateScene(argc, argv);
-	auto input = std::make_shared<Input>(window, scene);
+	gScene = scene.get();
 
 	int windowWidth, windowHeight;
 	glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
@@ -102,6 +103,25 @@ int main(const int argc, const char **argv) {
 	Camera cam;
 	cam.SetAspect(windowWidth, windowHeight);
 	float camSpeed = 10.0f;
+
+	glfwSetCursorPosCallback(window, [](GLFWwindow* window, double xpos, double ypos) -> void {
+		if(ImGui::GetIO().WantCaptureMouse) return;
+		if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS) {
+			constexpr float limitY = glm::half_pi<float>() * 0.9f;
+			gScene->mCameraRotationX += (gMouseX - xpos) * 0.025f;
+			gScene->mCameraRotationY += (gMouseY - ypos) * 0.015f;
+			gScene->mCameraRotationY = glm::clamp(gScene->mCameraRotationY, -limitY, limitY);
+		}
+		gMouseX = xpos;
+		gMouseY = ypos;
+	});
+
+	glfwSetScrollCallback(window, [](GLFWwindow* window, double xoffset, double yoffset) {
+		if(ImGui::GetIO().WantCaptureMouse) return;
+		const float scale = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? 5.0f : 0.25f;
+		gScene->mCameraDistance -= (float)yoffset * scale;
+		gScene->mCameraDistance = glm::clamp(gScene->mCameraDistance, gScene->mSelected ? gScene->mSelected->GetMinDistance() : 0.5f, 1000.0f);
+	});
 
 	FrameCounter<float> fps;
 	Timer<float> timer;
@@ -132,6 +152,10 @@ int main(const int argc, const char **argv) {
 
 		if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
 			glfwSetWindowShouldClose(window, 1);
+		}
+
+		if(glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+			scene->SelectNext();
 		}
 
 		if (nullptr != scene->mSelected) {
@@ -266,7 +290,6 @@ int main(const int argc, const char **argv) {
 		ui->Render();
 	}
 
-	input.reset();
 	scene.reset();
 	program.reset();
 
