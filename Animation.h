@@ -61,17 +61,6 @@ struct AnimationTrack {
 	glm::vec3 InterpolateScale(const float time) const {
 		return InterpolateKeyFrames(time, mScalingKeys);
 	}
-	glm::mat4 InterpolateTransform(const float time) const {
-		const auto translation = InterpolateTranslation(time);
-		const auto rotation = InterpolateRotation(time);
-		const auto scale = InterpolateScale(time);
-
-		glm::mat4 transform = glm::translate(glm::identity<glm::mat4>(), translation);
-		transform *= glm::mat4_cast(rotation);
-		transform = glm::scale(transform, scale);
-
-		return transform;
-	}
 };
 typedef std::shared_ptr<AnimationTrack> AnimationTrack_;
 
@@ -109,14 +98,6 @@ struct Animation {
 			}
 		}
 		return nullptr;
-	}
-
-	glm::mat4 GetNodeTransform(const float time, const AnimationNode_ node) const {
-		const auto& track = GetAnimationTrack(node->mName);
-		if (nullptr == track) {
-			return node->mTransform;
-		}
-		return track->InterpolateTransform(time);
 	}
 
 	float GetAnimationTime(const float time) {
@@ -175,6 +156,7 @@ struct AnimationController {
 	std::unordered_map<size_t, std::unordered_map<size_t, bool>> mDisabledBones; // FIXME: Experimental
 	std::vector<glm::mat4> mFinalTransforms;
 	glm::mat4 mGlobalInverseTransform;
+	const float mMinWeight = 0.005f;
 
 	AnimationController(AnimationSet_ animationSet, const glm::mat4& globalInverseTransform) {
 		mAnimationSet = animationSet;
@@ -206,7 +188,7 @@ struct AnimationController {
 	void BlendNodeHierarchy(std::vector<glm::mat4>& outputTransforms, const float absoluteTime, const AnimationNode_ node, const glm::mat4 parentTransform) {
 		BlendNodeHierarchy([&](auto boneIndex, const auto& combinedTransform, const auto& parentTransform, const auto& outputTransform) {
 			outputTransforms[boneIndex] = mGlobalInverseTransform * outputTransform;
-			}, absoluteTime, node, parentTransform);
+		}, absoluteTime, node, parentTransform);
 	}
 
 	void BlendNodeHierarchy(std::function<void(uint32_t, const glm::mat4&, const glm::mat4&, const glm::mat4&)> callback, const float absoluteTime) {
@@ -228,25 +210,28 @@ struct AnimationController {
 		}
 	}
 
-	glm::mat4 BlendNode(const size_t boneIndex, const float absoluteTime, const AnimationNode_ node) {
-		const auto minWeight = 0.005f;
+	std::unordered_map<size_t, float> GetNormalizedWeights(const size_t boneIndex) {
+		std::unordered_map<size_t, float> result;
 		float totalWeight = 0.0f;
 		for(auto& [k, w] : mAnimationWeights) {
-			if(w < minWeight) continue;
+			if(w < mMinWeight) continue;
 			if(mDisabledBones[k][boneIndex]) continue;
 			totalWeight += w;
+			result[k] = w;
 		}
+		for(auto& [k, w] : result) result[k] /= totalWeight;
+		return result;
+	}
 
-		if(totalWeight == 0.0f) return node->mTransform;
+	glm::mat4 BlendNode(const size_t boneIndex, const float absoluteTime, const AnimationNode_ node) {
+		const auto weights = GetNormalizedWeights(boneIndex);
+		if(weights.empty()) return node->mTransform;
 
 		glm::vec3 translation = { 0, 0, 0 };
 		glm::quat rotation = glm::identity<glm::quat>();
 		glm::vec3 scale = { 0, 0, 0 };
 
-		for(auto& [k, w] : mAnimationWeights) {
-			if(w < minWeight) continue;
-			if(mDisabledBones[k][boneIndex]) continue;
-			const auto animationWeight = w / totalWeight;
+		for(auto& [k, animationWeight] : weights) {
 			auto& animation = mAnimationSet->mAnimations[k];
 			const auto animationTime = animation->GetAnimationTime(absoluteTime);
 			auto track = animation->GetAnimationTrack(node->mName);
